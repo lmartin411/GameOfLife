@@ -1,0 +1,221 @@
+int row = 38;
+int col = 32;
+long start;
+boolean play = true;
+Cell[][] cg = new Cell[row][col];
+ArrayList<Cell> alive = new ArrayList<Cell>();
+
+void setup() {
+  size(600 + 225/2, 600);
+  background(0, 0, 0);
+  for (int c = 0; c < row; c++) {
+    for (int j = 0; j < col; j++) {
+      cg[c][j] = new Cell(color(0, 0, 0), false, (float) c * width/row, (float) (j + 1) * height/(col + 1));
+    }
+  }
+  
+  
+  for (int i = 0; i < col; i++) {
+    cg[15][i].b = true;
+    alive.add(cg[15][i]);
+  }
+  for (int i = 0; i < col; i++) {
+    cg[19][i].b = true;
+    alive.add(cg[19][i]);
+  }
+
+  start = millis();
+}
+
+void mouseClicked() {
+  if (mouseY < height/(col + 1)) {
+    if (mouseX < width/4) {
+      play = !play;
+    }
+    else if (mouseX < 2*width/4) {
+      reverseSelect();
+    }
+    else if (mouseX < 3*width/4) {
+      nextStep();
+    }
+    else {
+      clear();
+    }
+  }
+  else {
+    int c = floor(mouseX*row/width);
+    int j = floor(mouseY*(col + 1)/height) - 1;
+    cg[c][j].b = !cg[c][j].b;
+    if (alive.contains(cg[c][j])) {
+      cg[c][j].f = color(0);
+      alive.remove(cg[c][j]);
+    }
+    else {
+      cg[c][j].f = color(255);
+      alive.add(cg[c][j]);
+    }
+    cg[c][j].drawRect();
+  }
+}
+
+void draw() {
+  pushStyle();
+  fill(255, 255, 0);
+  rect(0, 0, width/4, height/(col + 1));
+  popStyle();
+  
+  pushStyle();
+  fill(0, 0, 255);
+  rect(width/4, 0, width/4, height/(col + 1));
+  popStyle();
+  
+  pushStyle();
+  fill(0, 255, 0);
+  rect(width/2, 0, width/4, height/(col + 1));
+  popStyle();
+  
+  pushStyle();
+  fill(255, 0, 0);
+  rect(3*width/4, 0, width/4, height/(col + 1));
+  popStyle();
+  
+  //making the thing run only once every .25 seconds
+  if (play && millis() - start >= 250) {
+    nextStep();
+    start = millis();
+  }
+}
+
+void checkCellGrid() {
+  //for every cell, run the check cell method
+  for (int c = 0; c < row; c++) {
+    for (int j = 0; j < col; j++) {
+      checkCell(c, j);
+    }
+  }
+}
+
+//checks a cell in cg to determine if the living or dead status changes
+void checkCell(int c, int j) {
+  //creating additional boolean to check living or dead
+  //without changing object yet so later blocks are correct
+  boolean bool = cg[c][j].b;
+  //count of number of living cells
+  int count = 0;
+
+  //checks all of the cells around the current cell
+  //above cell
+  for (int i = -1; i <= 1; i++) {
+    if (j > 0 && c + i < row && c + i > 0 && cg[c + i][j - 1].b == true) {
+      count++;
+    }
+  }
+  //in line with cell
+  for (int i = -1; i <= 1; i += 2) {
+    if (c + i < row && c + i > 0 && cg[c + i][j].b == true) {
+      count++;
+    }
+  }
+  //below cell
+  for (int i = -1; i <= 1; i++) {
+    if (j + 1 < col && c + i < row && c + i > 0 && cg[c + i][j + 1].b == true) {
+      count++;
+    }
+  }
+
+  //checks if the count of cells changes anything
+  if (bool && count > 3) {
+    //an alive cell with 
+    bool = false;
+  }
+  else if (!bool && count == 3) {
+    bool = true;
+  }
+  else if (bool && count < 2) {
+    bool = false;
+  }
+  //if the cell is alive, add to alive
+  if (bool) {
+    alive.add(cg[c][j]);
+  }
+}
+
+//makes current alive cells dead
+//and dead cells alive
+void reverseSelect() {
+  alive.clear();
+  for (int c = 0; c < row; c++) {
+    for (int j = 0; j < col; j++) {
+      cg[c][j].b = !cg[c][j].b;
+      if (cg[c][j].b) {
+        alive.add(cg[c][j]);
+        cg[c][j].f = color(255, 255, 255);
+      }
+      else {
+        cg[c][j].f = color(0, 0, 0);
+      }
+      cg[c][j].drawRect();
+    }
+  }
+}
+
+void nextStep() {
+  for (Cell a : alive) {
+      //for every cell alive right now, set a specific fill color
+      a.f = color(255, 255, 255);
+      a.b = true;
+    }
+    for (int c = 0; c < row; c++) {
+      for (int j = 0; j < col; j++) {
+        //for every cell in the grid check if it is in alive
+        if (!alive.contains(cg[c][j])) {
+          //if the cell isn't in alive, set fill to black
+          cg[c][j].f = color(0, 0, 0);
+          cg[c][j].b = false;
+        }
+        //draw every cell
+        cg[c][j].drawRect();
+      }
+    }
+    //clear alive and then refill alive for the next loop
+    alive.clear();
+    checkCellGrid();
+}
+
+void clear() {
+  alive.clear();
+  for (int c = 0; c < row; c++) {
+    for (int j = 0; j < col; j++) {
+      cg[c][j].b = false;
+      cg[c][j].f = color(0, 0, 0);
+      cg[c][j].drawRect();
+    }
+  }
+  
+}
+
+class Cell {
+  color f;
+  boolean b;
+  float xpos, ypos;
+
+  Cell(float x, float y) {
+    f = color(0, 0, 0);
+    b = false;
+    xpos = x;
+    ypos = y;
+  }
+
+  Cell(color fill, boolean bool, float x, float y) {
+    f = fill;
+    b = bool;
+    xpos = x;
+    ypos = y;
+  }
+
+  void drawRect() {
+    fill(f);
+    stroke(color(255, 0, 0));
+    rect(xpos, ypos, width/row, height/(col + 1));
+  }
+}
